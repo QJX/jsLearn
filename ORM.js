@@ -112,7 +112,10 @@ Model.extend({
 var Asset = Model.create();
 var User = Model.create();
 
-var user1 = User.init({name: 'caogen'});
+var user1 = User.init({id: 1, name: 'caogen'});
 var user2 = User.init({name: 'QJX'});
-user2.save();
+user1.save();
 console.log(user1, user2);
+console.log(User.find(1));
+// user2.save();
+console.log(User.find(2));
