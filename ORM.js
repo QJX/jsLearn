@@ -10,6 +10,7 @@ var Model = {
   inherited: function () {},
   created: function () {
     this.records = {};
+    this.attributes = [];
   },
 
   prototype: {
@@ -89,12 +90,24 @@ Model.extend({
     }
     return this.records[id];
   },
-
   populate: function (values) {
-    this.records = {};
     var i, il = values.length;
+    this.records = {};
     for (i = 0; i < il; i += 1) {
       this.init(values[i]).save();
+    }
+  },
+  LocalStorage: {
+    saveLocal: function (name) {
+      var i, result = [];
+      for (i in this.records) {
+        result.push(this.records[i]);
+      }
+      localStorage.setItem(name, JSON.stringify(result));
+    },
+    loadLocal: function (name) {
+      var result = JSON.parse(localStorage.getItem(name));
+      this.populate(result);
     }
   }
 });
@@ -119,21 +132,62 @@ Model.include({
   },
   save: function () {
     this.newRecord ? this.create() : this.update();
+    return this;
+  },
+  attributes: function () {
+    var result = {}, attrs = this.parent.attributes;
+    var i, attr, il = attrs.length;
+    for (i = 0; i < il; i += 1) {
+      attr = attrs[i];
+      result[attr] = this[attr];
+    }
+    result.id = this.id;
+    return result;
+  },
+  toJSON: function () {
+    return (this.attributes());
+  },
+  createRemote: function (url, callback) {
+    jQuery.post(url, this.attributes, callback);
+  },
+  updateRemote: function (url, callback) {
+    jQuery.ajax({
+      url: url,
+      data: this.attributes,
+      success: callback,
+      type: "PUT"
+    });
   }
 });
 
+//**************above is test code*****************
 
-var Asset = Model.create();
+// var Asset = Model.create();
+// var User = Model.create();
+
+// var user1 = User.init({id: 1, name: 'caogen'});
+// var user2 = User.init({name: 'QJX'});
+// user1.save();
+// console.log(user1, user2);
+// console.log(User.find(1));
+// // user2.save();
+// console.log(User.find(2));
+
+// jQuery.getJSON('/path/to/file', {param1: 'value1'}, function (json, textStatus) {
+//   User.populate(json);
+// });
+
 var User = Model.create();
-
-var user1 = User.init({id: 1, name: 'caogen'});
-var user2 = User.init({name: 'QJX'});
-user1.save();
-console.log(user1, user2);
-console.log(User.find(1));
-// user2.save();
-console.log(User.find(2));
-
-jQuery.getJSON('/path/to/file', {param1: 'value1'}, function (json, textStatus) {
-  User.populate(json);
-});
+User.extend(Model.LocalStorage);
+User.attributes = ['name', 'age', 'entry'];
+var qjx = User.init({
+  name: 'QJX',
+  age: 25,
+  entry: new Date(2014, 4, 14)
+}).save();
+//console.log(qjx,User.records,User.saveLocal('qjx'),localStorage);
+User.saveLocal('qjx');
+console.log(localStorage);
+User.records = {};
+User.loadLocal('qjx');
+console.log(User.records);
