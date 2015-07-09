@@ -8,7 +8,9 @@ if (typeof Object.create !== "function") {
 
 var Model = {
   inherited: function () {},
-  created: function () {},
+  created: function () {
+    this.records = {};
+  },
 
   prototype: {
     init: function () {}
@@ -79,26 +81,6 @@ Math.guid = function () {
     return v.toString(16);
   }).toUpperCase();
 };
-Model.records = {};
-Model.include({
-  newRecord: true,
-  create: function () {
-    if (!this.id) {
-      this.id = Math.guid();
-    }
-    this.newRecord = false;
-    this.parent.records[this.id] = this;
-  },
-  update: function () {
-    this.parent.records[this.id] = this;
-  },
-  destroy: function () {
-    delete this.parent.records[this.id];
-  },
-  save: function () {
-   this.newRecord ? this.create() : this.update();
-  }
-});
 
 Model.extend({
   find: function (id) {
@@ -106,8 +88,40 @@ Model.extend({
       throw ("Unknow record");
     }
     return this.records[id];
+  },
+
+  populate: function (values) {
+    this.records = {};
+    var i, il = values.length;
+    for (i = 0; i < il; i += 1) {
+      this.init(values[i]).save();
+    }
   }
 });
+
+Model.include({
+  newRecord: true,
+  dup: function () {
+    return jQuery.extend(true, {}, this);
+  },
+  create: function () {
+    if (!this.id) {
+      this.id = Math.guid();
+    }
+    this.newRecord = false;
+    this.parent.records[this.id] = this.dup();
+  },
+  update: function () {
+    this.parent.records[this.id] = this.dup();
+  },
+  destroy: function () {
+    delete this.parent.records[this.id];
+  },
+  save: function () {
+    this.newRecord ? this.create() : this.update();
+  }
+});
+
 
 var Asset = Model.create();
 var User = Model.create();
@@ -119,3 +133,7 @@ console.log(user1, user2);
 console.log(User.find(1));
 // user2.save();
 console.log(User.find(2));
+
+jQuery.getJSON('/path/to/file', {param1: 'value1'}, function (json, textStatus) {
+  User.populate(json);
+});
